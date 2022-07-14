@@ -147,7 +147,7 @@ public class FileUtils {
      * @param dst
      * @throws IOException
      */
-    public static void copy(File src, File dst) {
+   /* public static void copy(File src, File dst) {
         InputStream in;
         OutputStream out;
         try {
@@ -202,7 +202,7 @@ public class FileUtils {
             LOGE("Compressing ERror Other: " + e.getLocalizedMessage());
         }
     }
-
+*/
     /***
      * Move File
      *
@@ -269,10 +269,10 @@ public class FileUtils {
      * @param ext
      * @return
      */
-    public static boolean isValidExtension(String ext) {
+   /* public static boolean isValidExtension(String ext) {
         return Arrays.asList(extensions).contains(ext);
 
-    }
+    }*/
 
     /**
      * Return Extension of given path without dot(.)

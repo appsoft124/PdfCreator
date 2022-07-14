@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     buildToolsVersion '30.0.2'
     defaultConfig {
         applicationId "com.pratikbutani.pdf"
@@ -18,10 +18,22 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    buildFeatures {
+        viewBinding true
+    }
+
+    packagingOptions {
+        exclude 'META-INF/NOTICE.md'
+        exclude 'META-INF/LICENSE.md'
+
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.annotation:annotation:1.2.0'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.0'
     androidTestImplementation('androidx.test.espresso:espresso-core:3.3.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
@@ -31,4 +43,8 @@ dependencies {
     implementation 'com.itextpdf:itext7-core:7.1.13'
     testImplementation 'junit:junit:4.13.1'
     implementation 'com.android.support:multidex:1.0.3'
+
+    /*java email api*/
+    implementation 'com.sun.mail:android-mail:1.6.6'
+    implementation 'com.sun.mail:android-activation:1.6.6'
 }
