@@ -1,29 +1,26 @@
 package com.pratikbutani.pdf.ui;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.fonts.Font;
-import android.os.AsyncTask;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.DeviceRgb;
@@ -34,8 +31,8 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfDocumentInfo;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.draw.DottedLine;
-import com.itextpdf.kernel.pdf.canvas.parser.listener.TextChunk;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.layout.element.Paragraph;
@@ -44,37 +41,20 @@ import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.property.TextAlignment;
 import com.pratikbutani.pdf.FileUtils;
 import com.pratikbutani.pdf.PdfDocAdapter;
-import com.pratikbutani.pdf.R;
 import com.pratikbutani.pdf.databinding.ActivityMainBinding;
-import com.pratikbutani.pdf.permission.PermissionsActivity;
-import com.pratikbutani.pdf.permission.PermissionsChecker;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
-import java.util.Properties;
 import java.util.TimeZone;
 
 import static com.pratikbutani.pdf.LogUtils.LOGE;
-import static com.pratikbutani.pdf.permission.PermissionsActivity.PERMISSION_REQUEST_CODE;
-import static com.pratikbutani.pdf.permission.PermissionsChecker.REQUIRED_PERMISSION;
-
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 
 public class MainActivity extends AppCompatActivity {
 
     Context mContext;
-    PermissionsChecker checker;
     String dest;
-    Button sentEmailBtn;
     ActivityMainBinding binding;
     double RevolutionOnWatch, PITCHOFPROPELLER, Enginemiles, Shipmiles = 0.1, slip;
     double Passingtime, EngineSpeed, ShipSpeed, MERPM;
@@ -88,34 +68,40 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         // call initView method here
         initView();
-
-
+        if (!isStoragePermissionGranted()) {
+            requestStoragePermission();
+        }
         mContext = getApplicationContext();
-        checker = new PermissionsChecker(this);
+        dest = getPath() + getFileName();
 
 
-        dest = getPath();
+        binding.buttonCreatePdf.setOnClickListener(view -> createPDF());
 
 
-        binding.buttonCreatePdf.setOnClickListener(view -> {
-            createPDF();
-        });
+        binding.sendEmail.setOnClickListener(view ->
+                sendEmailToUser(new File(dest)));
+
 
     }
 
     private String getPath() {
+        return FileUtils.getAppPath(mContext);
+    }
+
+    private String getFileName() {
         Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
         int currentYear = calendar.get(Calendar.YEAR);
         int currentMonth = calendar.get(Calendar.MONTH) + 1;
         int currentDay = calendar.get(Calendar.DAY_OF_MONTH);
-        return FileUtils.getAppPath(mContext) + currentYear + currentMonth + currentDay + "report.pdf";
+        return currentYear + currentMonth + currentDay + "report.pdf";
     }
 
-    private void openEmail() {
+    // sending email direct from app
+/*    private void openEmail() {
         Intent intent = new Intent(MainActivity.this, EmailActivity.class);
         intent.putExtra("filePath", dest);
         startActivity(intent);
-    }
+    }*/
 
 
     // initialize view here
@@ -260,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
-            /**
+            /*
              * Creating Document
              */
             PdfWriter pdfWriter = new PdfWriter(new FileOutputStream(dest));
@@ -280,7 +266,8 @@ public class MainActivity extends AppCompatActivity {
              */
             Color mColorAccent = new DeviceRgb(153, 204, 255);
             Color mColorBlack = new DeviceRgb(0, 0, 0);
-            Color whiteColor = new DeviceRgb(0, 0, 0);
+            Color whiteColor = new DeviceRgb(255, 255, 255);
+
             float mHeadingFontSize = 26.0f;
             float mValueFontSize = 20.0f;
 
@@ -292,81 +279,89 @@ public class MainActivity extends AppCompatActivity {
 
 
             // Title Order Details...
-            addNewIte(document, TextAlignment.CENTER, "Order Details", 40.0f, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, "Order Details", 40.0f, font, mColorBlack, false);
 
             // Fields of Order Details...
 
             // Adding Chunks for Title and value
-            addNewIte(document, TextAlignment.LEFT, "Pitch of Propeller:", mHeadingFontSize, font, mColorAccent);
+            addNewIte(document, TextAlignment.LEFT, "Pitch of Propeller:", mHeadingFontSize, font, mColorBlack, true);
             // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, inputpitch, mValueFontSize, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, inputpitch, mValueFontSize, font, mColorBlack, false);
             // add space line
             addSpace(document);
-
 
 
             // Engine Miles [nautical miles] field
-            addNewIte(document, TextAlignment.LEFT, "M/E Revolutions on watch:", mHeadingFontSize, font, mColorAccent);
+            addNewIte(document, TextAlignment.LEFT, "M/E Revolutions on watch:", mHeadingFontSize, font, mColorBlack, true);
             // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, inputROW, 40.f, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, inputROW, 30.f, font, mColorBlack, false);
             // add space line
             addSpace(document);
 
 
             // ship Miles [nautical miles] field
-            addNewIte(document, TextAlignment.LEFT, "Engine Miles [nautical miles]:", mHeadingFontSize, font, mColorAccent);
+            addNewIte(document, TextAlignment.LEFT, "Engine Miles [nautical miles]:", mHeadingFontSize, font, mColorBlack, true);
             // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, String.valueOf(Enginemiles), mValueFontSize, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, String.valueOf(Enginemiles), 30.f, font, mColorBlack, false);
             // add space line
             addSpace(document);
 
             // ship Miles [nautical miles] field
-            addNewIte(document, TextAlignment.LEFT, "Ship Miles [nautical miles]:", mHeadingFontSize, font, mColorAccent);
+            addNewIte(document, TextAlignment.LEFT, "Ship Miles [nautical miles]:", mHeadingFontSize, font, mColorBlack, true);
             // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, inputshipmiles, 30.f, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, inputshipmiles, 30.f, font, mColorBlack, false);
+            // add space line
+            addSpace(document);
+
+
+//            float col = 280f;
+//            float[] clolumWidth = {col, col};
+//            Table table = new Table(clolumWidth);
+//            table.setBorder(null);
+//            table.setBackgroundColor(whiteColor).setBorder(Border.NO_BORDER);
+//            table.addCell("ship [%]:").setFontSize(20.f).setBorder(Border.NO_BORDER);
+//            table.addCell(String.valueOf(slip)).setFontSize( 30.f).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
+//            document.add(table);
+
+//            // ship [ ] field
+            addNewIte(document, TextAlignment.LEFT, "ship [%]:", mHeadingFontSize, font, mColorBlack, false);
+            // Pitch of Propeller detail
+            addNewIte(document, TextAlignment.CENTER, String.valueOf(slip), 30.f, font, mColorBlack, false);
             // add space line
             addSpace(document);
 
 
             // ship [ ] field
-            addNewIte(document, TextAlignment.LEFT, "ship [%]:", mHeadingFontSize, font, mColorAccent);
+            addNewIte(document, TextAlignment.LEFT, "Passing time hours:", mHeadingFontSize, font, mColorBlack, true);
             // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, String.valueOf(slip), 30.f, font, mColorBlack);
-            // add space line
-            addSpace(document);
-
-
-            // ship [ ] field
-            addNewIte(document, TextAlignment.LEFT, "Passing time hours:", mHeadingFontSize, font, mColorAccent);
-            // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, inputtime, mValueFontSize, font, mColorBlack);
-
-            // add space line
-            addSpace(document);
-
-
-            // ship [ ] field
-            addNewIte(document, TextAlignment.LEFT, "Engine speed [knotes]:", mHeadingFontSize, font, mColorAccent);
-            // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, String.valueOf(EngineSpeed), 30.f, font, mColorBlack);
-
-            // add space line
-            addSpace(document);
-
-
-            // ship [ ] field
-            addNewIte(document, TextAlignment.LEFT, "Ship,s Speed [knotes]:", mHeadingFontSize, font, mColorAccent);
-            // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, String.valueOf(ShipSpeed), 30.f, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, inputtime, 30.f, font, mColorBlack, false);
 
             // add space line
             addSpace(document);
 
 
             // ship [ ] field
-            addNewIte(document, TextAlignment.LEFT, "M/V [rpm]:", mHeadingFontSize, font, mColorAccent);
+            addNewIte(document, TextAlignment.LEFT, "Engine speed [knotes]:", mHeadingFontSize, font, mColorBlack, false);
             // Pitch of Propeller detail
-            addNewIte(document, TextAlignment.CENTER, String.valueOf(MERPM), 30.f, font, mColorBlack);
+            addNewIte(document, TextAlignment.CENTER, String.valueOf(EngineSpeed), 30.f, font, mColorBlack, false);
+
+            // add space line
+            addSpace(document);
+
+
+            // ship [ ] field
+            addNewIte(document, TextAlignment.LEFT, "Ship,s Speed [knotes]:", mHeadingFontSize, font, mColorBlack, false);
+            // Pitch of Propeller detail
+            addNewIte(document, TextAlignment.CENTER, String.valueOf(ShipSpeed), 30.f, font, mColorBlack, false);
+
+            // add space line
+            addSpace(document);
+
+
+            // ship [ ] field
+            addNewIte(document, TextAlignment.LEFT, "M/V [rpm]:", mHeadingFontSize, font, mColorBlack, false);
+            // Pitch of Propeller detail
+            addNewIte(document, TextAlignment.CENTER, String.valueOf(MERPM), 30.f, font, mColorBlack, false);
 
             // add space line
             addSpace(document);
@@ -401,14 +396,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void createPDF() {
-        if (checker.lacksPermissions(REQUIRED_PERMISSION)) {
-            PermissionsActivity.startActivityForResult(MainActivity.this, PERMISSION_REQUEST_CODE, REQUIRED_PERMISSION);
-        } else {
-            createPdf(dest);
-        }
+
+        createPdf(dest);
+
     }
 
-    private void addNewItemLeftRight(Document document, String leftItem, String rightItem) {
+    /*
+ private void addNewItemLeftRight(Document document, String leftItem, String rightItem) {
 
         // Fields of Order Details...
         Text textLeft = new Text(leftItem);
@@ -420,10 +414,21 @@ public class MainActivity extends AppCompatActivity {
         document.add(paragraph);
 
     }
+*/
 
-    private void addNewIte(Document document, TextAlignment aligment, String text, float fontSize, PdfFont font, Color mColorBlack) {
-        Text mTitle = new Text(text).setFont(font).setFontSize(fontSize).setFontColor(mColorBlack);
-        Paragraph mOrderDetailsTitleParagraph = new Paragraph(mTitle).setTextAlignment(aligment);
+    private void addNewIte(Document document, TextAlignment aligment, String text, float fontSize, PdfFont font, Color mTextColor, boolean isHeading) {
+        Color color = null;
+
+        if (isHeading) {
+            color = new DeviceRgb(153, 204, 255);
+
+        } else {
+            color = new DeviceRgb(255, 255, 255);
+
+        }
+
+        Text mTitle = new Text(text).setFont(font).setFontSize(fontSize).setFontColor(mTextColor);
+        Paragraph mOrderDetailsTitleParagraph = new Paragraph(mTitle).setTextAlignment(aligment).setBackgroundColor(color);
         document.add(mOrderDetailsTitleParagraph);
     }
 
@@ -441,15 +446,71 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == PermissionsActivity.PERMISSIONS_GRANTED) {
-            Toast.makeText(mContext, "Permission Granted to Save", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(mContext, "Permission not granted, Try again!", Toast.LENGTH_SHORT).show();
+    private void sendEmailToUser(File savepath) {
+
+        try {
+            if (savepath != null) {
+
+                Uri uri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", savepath);
+                Intent emailIntent = new Intent(Intent.ACTION_SEND);
+                emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"abc@gmail.com"});
+                emailIntent.putExtra(Intent.EXTRA_SUBJECT, "order detail");
+                emailIntent.putExtra(Intent.EXTRA_TEXT, "Your order details");
+                emailIntent.putExtra(Intent.EXTRA_STREAM, uri);
+//                emailIntent.setType("text/plain");
+                emailIntent.setType("message/rfc822");
+                emailIntent.setPackage("com.google.android.gm");
+                startActivity(emailIntent);
+
+            } else {
+                Toast.makeText(mContext, "please create pdf first", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.d("sendEmail", e.getMessage());
         }
+
+
     }
 
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode != 101) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            return;
+        }
+
+        if (grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(mContext, "permission granted", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "You must Grants Storage Permission to continue", Toast.LENGTH_LONG).show();
+        }
+
+
+    }
+
+
+    private void requestStoragePermission() {
+        final String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE};
+        ActivityCompat.requestPermissions(this, permissions, 101);
+    }
+
+
+    private boolean isStoragePermissionGranted() {
+        boolean granted;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            granted = (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) &&
+                    (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
+        } else {
+            granted = true;
+        }
+        return granted;
+    }
+
 }
+
+

@@ -38,8 +38,8 @@ public class EmailActivity extends AppCompatActivity {
     EditText userMail;
     Button sendBtn;
 
-    String email = "itsolutions.infoe@gmail.com";
-    String password = "bidwxoaqfcokvorp";
+    String email = "abc@gmail.com";
+    String password = "fajkdnfakjd";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
